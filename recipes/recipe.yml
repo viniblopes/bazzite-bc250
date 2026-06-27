@@ -20,4 +20,3 @@ modules:
     scripts:
       - build-wifi.sh # Chama o script que criaremos no próximo passo
       - build-bc250-mods.sh # Novo script
-  - type: signing # this sets up the proper policy & signing files for signed images to work fully
