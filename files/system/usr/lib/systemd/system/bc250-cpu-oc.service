@@ -1,0 +1,12 @@
+[Unit]
+Description=BC-250 CPU SMU Overclock & Undervolt
+After=multi-user.target
+
+[Service]
+Type=oneshot
+# Chama a ferramenta Python para aplicar as configurações no boot
+ExecStart=/usr/bin/bc250-apply -a /etc/bc250_smu.toml
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

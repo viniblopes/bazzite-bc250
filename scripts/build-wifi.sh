@@ -1,25 +1,40 @@
-#!/bin/bash
-set -ou exitecho
+#!/usr/bin/env bash
+set -e
 
-echo "Construindo driver aic8800d80..."
-
-# 1. Identifica a versão exata do kernel presente na imagem OCI do Bazzite
+# Define a versão do kernel atual
 KVER=$(ls /usr/lib/modules | head -n 1)
 
-# 2. Instala os pacotes de desenvolvimento necessários
-rpm-ostree install kernel-devel kernel-headers gcc make git
+echo "Baixando e compilando driver AIC8800..."
 
-# 3. Clona e compila o driver do seu link
-git clone https://github.com/shenmintao/aic8800d80.git /tmp/aic8800
-cd /tmp/aic8800/drivers/aic8800
-make KERNEL_RELEASE=$KVER KDIR=/usr/lib/modules/$KVER/build
+# Cria uma pasta temporária para o clone
+mkdir -p /tmp/aic_build
+cd /tmp/aic_build
 
-# 4. Copia o módulo compilado (.ko) para a pasta de módulos extras do kernel
-mkdir -p /usr/lib/modules/$KVER/extra
-cp aic8800_fdrv.ko /usr/lib/modules/$KVER/extra/
+# Baixa o repositório diretamente do GitHub
+git clone https://github.com/shenmintao/aic8800d80 .
 
-# 5. Copia o firmware
-cp -r ../../fw/aic8800D80 /usr/lib/firmware/
+# Entra na pasta do driver
+cd drivers/aic8800
 
-# 6. Atualiza a árvore de módulos da imagem
+# Compila o módulo
+make ARCH=x86_64
+
+# Cria as pastas de destino no sistema de arquivos da imagem
+mkdir -p /usr/lib/modules/$KVER/extra/aic8800
+mkdir -p /usr/lib/firmware/aic8800D80
+
+# Copia os módulos compilados
+cp aic8800_fdrv/aic8800_fdrv.ko /usr/lib/modules/$KVER/extra/aic8800/
+cp aic_load_fw/aic_load_fw.ko /usr/lib/modules/$KVER/extra/aic8800/
+
+# Copia os firmwares (ajustado para copiar da estrutura do repo baixado)
+cp ../../fw/aic8800D80/* /usr/lib/firmware/aic8800D80/
+
+# Registra os módulos e configura o carregamento automático
 depmod -a -b /usr $KVER
+echo "aic8800_fdrv" > /usr/lib/modules-load.d/aic8800.conf
+
+# Limpeza
+rm -rf /tmp/aic_build
+
+echo "Driver compilado, instalado e registrado com sucesso."

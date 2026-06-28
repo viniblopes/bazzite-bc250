@@ -2,21 +2,19 @@
 # yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
 # image will be published to ghcr.io/<user>/<name>
 name: bazzite-bc250
-# description will be included in the image's metadata
-description: Bazzite customizado com driver Wi-Fi aic8800d80 para bc250.
+description: Bazzite com aic8800d80, 40cu unlock e smu oc
+base-image: ghcr.io/ublue-os/bazzite
+image-version: latest
 
-# the base image to build on top of (FROM) and the version tag to use
-base-image: ghcr.io/ublue-os/bazzite-deck
-image-version: latest # latest is also supported if you want new updates ASAP
-
-# module configuration, executed in order
-# you can include multiple instances of the same module
 modules:
-  - type: files
-    files:
-      - usr: /usr
+  - type: rpm-ostree
+    install:
+      - gcc
+      - make
+      - kernel-devel
+      - kernel-headers
 
   - type: script
     scripts:
-      - build-wifi.sh # Chama o script que criaremos no próximo passo
-      - build-bc250-mods.sh # Novo script
+      - build-wifi.sh
+      - build-bc250-mods.sh
