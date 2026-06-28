@@ -1,40 +1,27 @@
 #!/usr/bin/env bash
 set -e
 
-# Define a versão do kernel atual
-KVER=$(ls /usr/lib/modules | head -n 1)
+echo "Preparando ambiente para build do driver Wi-Fi (RPM)..."
 
-echo "Baixando e compilando driver AIC8800..."
+# Instala ferramentas necessárias para criar o RPM
+rpm-ostree install rpm-build rpmdevtools dkms
 
-# Cria uma pasta temporária para o clone
-mkdir -p /tmp/aic_build
-cd /tmp/aic_build
+# Prepara a estrutura do rpmbuild
+mkdir -p $HOME/rpmbuild/{SOURCES,SPECS,RPMS,SRPMS,BUILD,BUILDROOT}
 
-# Baixa o repositório diretamente do GitHub
-git clone https://github.com/shenmintao/aic8800d80 .
+# Baixa a spec file (use a branch 'bluetooth' como você identificou)
+# Ajuste o link se necessário para a branch específica
+curl -L -s https://raw.githubusercontent.com/shenmintao/aic8800d80/bluetooth/bazzite/aic8800d80.spec -o $HOME/rpmbuild/SPECS/aic8800d80.spec
 
-# Entra na pasta do driver
-cd drivers/aic8800
+# Baixa os arquivos necessários pela spec
+spectool -g -R $HOME/rpmbuild/SPECS/aic8800d80.spec
 
-# Compila o módulo
-make ARCH=x86_64
+# Compila o RPM
+# O parâmetro --define "uname $(uname -r)" garante que o driver seja feito para o kernel atual
+rpmbuild --define "uname $(uname -r)" -bb $HOME/rpmbuild/SPECS/aic8800d80.spec
 
-# Cria as pastas de destino no sistema de arquivos da imagem
-mkdir -p /usr/lib/modules/$KVER/extra/aic8800
-mkdir -p /usr/lib/firmware/aic8800D80
+# Instala o pacote gerado
+# O comando abaixo encontra o arquivo .rpm gerado automaticamente
+rpm-ostree install $HOME/rpmbuild/RPMS/x86_64/aic8800d80-*.rpm
 
-# Copia os módulos compilados
-cp aic8800_fdrv/aic8800_fdrv.ko /usr/lib/modules/$KVER/extra/aic8800/
-cp aic_load_fw/aic_load_fw.ko /usr/lib/modules/$KVER/extra/aic8800/
-
-# Copia os firmwares (ajustado para copiar da estrutura do repo baixado)
-cp ../../fw/aic8800D80/* /usr/lib/firmware/aic8800D80/
-
-# Registra os módulos e configura o carregamento automático
-depmod -a -b /usr $KVER
-echo "aic8800_fdrv" > /usr/lib/modules-load.d/aic8800.conf
-
-# Limpeza
-rm -rf /tmp/aic_build
-
-echo "Driver compilado, instalado e registrado com sucesso."
+echo "Driver Wi-Fi empacotado e instalado via RPM com sucesso."
